@@ -37,7 +37,8 @@ void q_free(queue_t *q)
 {
     /* How about freeing the list elements? */
     /* Free queue structure */
-    for(list_ele_t *ptr = q->head; ptr != NULL; ;)
+    list_ele_t *ptr = NULL;
+    for(ptr = q->head; ptr != NULL;)
     {
         list_ele_t *tmp = ptr->next;
         free(ptr);
@@ -85,7 +86,7 @@ bool q_insert_tail(queue_t *q, int v)
     if((q == NULL) || (newh == NULL))
         return false;
     newh->value = v;
-    newh->value = NULL;
+    newh->next = NULL;
     if(q->tail == NULL)
     {
         q->head = newh;
@@ -144,6 +145,19 @@ void q_reverse(queue_t *q)
     /* You need to write the code for this function */
     if((q == NULL) || (q->head == NULL))
         return;
-    
+    list_ele_t *ptr1 = q->head;
+    list_ele_t *ptr2 = NULL;
+    list_ele_t *tmp = NULL;
+
+    for(ptr2 = ptr1->next; ptr2 != NULL; )
+    {
+        tmp = ptr2->next;
+        ptr2->next = ptr1;
+        ptr1 = ptr2;
+        ptr2 = tmp;
+    }
+    q->head->next = NULL;
+    q->tail = q->head;
+    q->head = ptr1;
 }
 
