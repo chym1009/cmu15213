@@ -217,7 +217,8 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return 2;
+  int mask = ~!x + 1;
+  return (~mask & y) | (mask & z);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -227,7 +228,19 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+  /* 
+   * x <= y <==> x - y <= 0 <==> x + ~y < 0
+   * x + ~y会有溢出，需要考虑corner case
+   */
+  int high_bit_mask = 1 << 31;
+  /* x + ~y 的最高为1, 则x < y, 但由于有溢出，需要考虑一些corner case*/
+  int high_bit_of_sum = (x + (~y)) & high_bit_mask;
+  /* x的最高位为1, y的最高位为0, 且 x + ~y 溢出，则 x < y, 但 x + ~y 的最高位为0 */
+  int corner_mask_1 = x & high_bit_mask & ((y & high_bit_mask) ^ high_bit_mask);
+  /* x的最高位为0, y的最高位为1， 且 x + ~y 溢出, 则 x > y, 但 x + ~y的最高位为1 */
+  int corner_mask_2 = y & high_bit_mask & ((x & high_bit_mask) ^ high_bit_mask);
+  
+  return !!((corner_mask_1 | high_bit_of_sum) & (~corner_mask_2 & high_bit_mask));
 }
 //4
 /* 
@@ -239,7 +252,7 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  return 2;
+  return (((~x + 1) | x) >> 31) + 1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
