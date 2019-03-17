@@ -267,7 +267,39 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  return 0;
+    int isZeroOrNegone = !x | (!(x + 1));
+  int firstShift = 0;
+  int secondShift = 0; 
+  int thirdShift = 0;
+  int fourthShift = 0;
+  int fifthShift = 0;
+  int total = 0;
+
+  // Get -x - 1
+  x = x >> 31 ^ x;
+
+  /*
+   * Divide and Conquer
+   * Find the highest bit of 1
+   */
+  firstShift = !(!(x>>16)) << 4;
+  x >>= firstShift;
+
+  secondShift = !(!(x>>8)) << 3;
+  x >>= secondShift;
+
+  thirdShift = !(!(x>>4)) << 2;
+  x >>= thirdShift;
+
+  fourthShift = !(!(x>>2)) << 1;
+  x >>= fourthShift;
+
+  fifthShift = 1;
+  x >>= fifthShift;
+ 
+  total = firstShift + secondShift + thirdShift + fourthShift + fifthShift + x + 1;
+
+  return (isZeroOrNegone&(~((~(!isZeroOrNegone)) + 1))) + (total&((~(!isZeroOrNegone)) + 1)); 
 }
 //float
 /* 
