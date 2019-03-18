@@ -267,39 +267,44 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-    int isZeroOrNegone = !x | (!(x + 1));
-  int firstShift = 0;
-  int secondShift = 0; 
-  int thirdShift = 0;
-  int fourthShift = 0;
-  int fifthShift = 0;
-  int total = 0;
-
-  // Get -x - 1
-  x = x >> 31 ^ x;
-
   /*
-   * Divide and Conquer
-   * Find the highest bit of 1
-   */
-  firstShift = !(!(x>>16)) << 4;
-  x >>= firstShift;
+     @ref: https://github.com/jerrylzy/CS33/blob/master/Lab/datalab/bits.c
+     * We first bit invert all negative numbers and
+     * use binary search to find out the log2(n).
+     * Then we add 1 to the final result since we need
+     * the MSB to represent the sign.
+     * Note: finding the following things are equal:
+     * 1. find the most significant bit of 1 for positive numbers
+     * 2. find the most significant bit of 0 for negative numbers
+     */
+    
+    /* I hate this, but I have to avoid parse error */
+    int sign, bit0, bit1, bit2, bit4, bit8, bit16;
 
-  secondShift = !(!(x>>8)) << 3;
-  x >>= secondShift;
+    sign = x >> 31;
+    
+    /* Bit invert x as needed */
+    x = (sign & ~x) | (~sign & x);
+    
+    /* Binary Search on bit level */
+    bit16 = !!(x >> 16) << 4;
+    x = x >> bit16;
+    
+    bit8 = !!(x >> 8) << 3;
+    x = x >> bit8;
+    
+    bit4 = !!(x >> 4) << 2;
+    x = x >> bit4;
+    
+    bit2 = !!(x >> 2) << 1;
+    x = x >> bit2;
+    
+    bit1 = !!(x >> 1);
+    x = x >> bit1;
+    
+    bit0 = x;
 
-  thirdShift = !(!(x>>4)) << 2;
-  x >>= thirdShift;
-
-  fourthShift = !(!(x>>2)) << 1;
-  x >>= fourthShift;
-
-  fifthShift = 1;
-  x >>= fifthShift;
- 
-  total = firstShift + secondShift + thirdShift + fourthShift + fifthShift + x + 1;
-
-  return (isZeroOrNegone&(~((~(!isZeroOrNegone)) + 1))) + (total&((~(!isZeroOrNegone)) + 1)); 
+    return bit16 + bit8 + bit4 + bit2 + bit1 + bit0 + 1;
 }
 //float
 /* 
@@ -314,7 +319,22 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+  unsigned s = 0x80000000 & uf;
+  unsigned e = 0x7f800000 & uf;
+  unsigned m = 0x007fffff & uf;
+
+  if (e == 0x7f800000)
+    return uf;
+
+  if (e)
+    return s | (e + 0x00800000) | m;
+
+  if (m < 0x00400000)
+    return s | e | (m << 1);
+
+  m = (m << 1) & 0x007fffff;
+   
+  return s | 0x800000 | m;
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
