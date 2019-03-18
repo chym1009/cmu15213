@@ -349,7 +349,36 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+  int sign = 1;
+  int e = (0x7f800000 & uf) >> 23;
+  int m = 0x007fffff & uf;
+  int ground = 0;
+  int r = 0;
+  int g = 0;
+  int b = 0;
+
+  if(uf > 0x8fffffff)
+    sign = -1;
+
+  if(e < 126)
+    return 0;
+
+  if(e > 157)
+    return 0x80000000u;
+
+  m = m | 0x00800000;
+
+  if(e >= 150)
+    m = m << (e - 150);
+
+  ground = 150 - e;
+  g = 1 << ground;
+  b = (~(0x800000 >> (e - 119)) & m;
+  r = 1 << (ground + 1);
+
+
+
+  return m;
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
