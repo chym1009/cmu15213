@@ -352,15 +352,12 @@ int floatFloat2Int(unsigned uf) {
   int sign = 1;
   int e = (0x7f800000 & uf) >> 23;
   int m = 0x007fffff & uf;
-  int ground = 0;
-  int r = 0;
-  int g = 0;
-  int b = 0;
+  int res = 0;
 
-  if(uf > 0x8fffffff)
+  if(uf >= 0x80000000)
     sign = -1;
 
-  if(e < 126)
+  if(e < 127)
     return 0;
 
   if(e > 157)
@@ -369,16 +366,13 @@ int floatFloat2Int(unsigned uf) {
   m = m | 0x00800000;
 
   if(e >= 150)
-    m = m << (e - 150);
+    res = m << (e - 150);
 
-  ground = 150 - e;
-  g = 1 << ground;
-  b = (~(0x800000 >> (e - 119)) & m;
-  r = 1 << (ground + 1);
+  res = m >> (150 - e);
 
-
-
-  return m;
+  if(sign == -1)
+    return -res;
+  return res;
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
@@ -394,5 +388,14 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+  if(x > 128)
+    return 0x7f800000;
+
+  if(x < -148)
+    return 0;
+
+  if(x <= -127)
+    return 1 << (x + 149);
+
+  return ((x + 127u) << 23);
 }
