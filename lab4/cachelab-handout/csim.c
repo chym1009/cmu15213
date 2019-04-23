@@ -6,6 +6,9 @@
 #include <getopt.h>
 #include "cachelab.h"
 
+#define MAX_FILE_NAME_LEN 256 /* trace文件名的最大长度 */
+#define MAX_LINE_LEN 1000   /* 读取trace文件中每行的最大长度 */
+
 /*
  * usage - Print usage info
  */
@@ -28,14 +31,19 @@ void usage(char *argv[]){
 int main(int argc, char* argv[])
 {
     int verbose = 0;
-    int s = 0;
-    int E = 0;
-    int b = 0;
-    int groupNum = 0;
-    char traceFile[100];
+    int set_bits_num = 0;    /* Number of set index bits */
+    int lines_num = 0;       /* Number of lines per set. */
+    int block_bits_num = 0;  /* Number of block offset bits*/
+    char trace_file[MAX_FILE_NAME_LEN] = ""; /* Trace file name */
+
+    char buf[MAX_LINE_LEN]; /* 存储trace文件中每行的内容 */
+    long unsigned addr;     /* trace文件每行中的地址 */
+    int set_bit_index;      /* addr中set index bit的子位掩码 */  
     char c;
 
-    traceFile[0] = '\0';
+    int hits = 0;      /* number of  hits */
+	int misses = 0;    /* number of misses */
+	int evictions = 0; /* number of evictions */
 
     while((c=getopt(argc,argv,"vs:E:b:t:")) != -1){
         switch(c){
@@ -43,16 +51,16 @@ int main(int argc, char* argv[])
             verbose = 1;
             break;
         case 's':
-            s = atoi(optarg);
+            set_bits_num = atoi(optarg);
             break;
         case 'E':
-            E = atoi(optarg);
+            lines_num = atoi(optarg);
             break;
         case 'b':
-            b = atoi(optarg);
+            block_bits_num = atoi(optarg);
             break;
         case 't':
-            strncpy(traceFile, optarg, 99);
+            strncpy(trace_file, optarg, MAX_FILE_NAME_LEN);
             break;
         case '?':
         default:
@@ -61,44 +69,59 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (s <= 0 || E <= 0 || b <= 0 || traceFile[0] == '\0') {
+    if (set_bits_num <= 0 || lines_num <= 0 || block_bits_num <= 0 || trace_file[0] == '\0') {
         printf("Error: Missing required argument\n");
         usage(argv);
         exit(1);
     }
 
-    groupNum = 1 << s;
-
-    /* define the struct of a line, according to Programming Rules for Part A, memory accesses 
-     * are aligned properly, we don't need define cache block. */
-    typedef struct 
+    /* set为cache中的一组，因为不需要具体存放的block，简化了set结构 */
+    typedef struct
     {   
-        long tag; 
-        int vaild;
-    }  line;
-
-    /* define the struct of a group */
-    typedef struct csim
-    {
-        line lines[E];
-    } group;
+        long tag[lines_num];
+        int vaild[lines_num]; /* cache中每组 */
+        int lru[lines_num];   /*用于evict过程中判断替换哪一行*/
+    } set;
     
-    /* allocate the memory to simulate cache */
-    group* cachePtr = (group*) malloc(groupNum * sizeof(group));
-    if(cachePtr == 0) {
+    /* 申请内存模拟cache并初始化vaild */
+    set* cache_ptr = malloc((1 << set_bits_num)* sizeof(set));
+    if(cache_ptr == 0) {
         exit(1);
     }
 
-    /* init the vaild bit*/
-    for (int i = 0; i < groupNum; i++)
-        for (int j = 0; j < E; j++)
-            cachePtr[i].lines[j].vaild = 0;
+    for (int i = 0; i < (1 << set_bits_num); i++)
+        for (int j = 0; j < lines_num; j++)
+            cache_ptr[i].vaild[j] = 0;
 
+    FILE* fp; 
+    fp = fopen(trace_file, "r"); 
+    if (fp == NULL) {
+        printf("Trace file %s doesn't exist.", trace_file);
+    }
     
+    /* 根据set_bits_num 和 block_bits_num 计算 set_bit_index */
+    int s = set_bits_num - 1;
+    while (s >= 0) {  
+        set_bit_index |= 1 << (s + block_bits_num);  
+        s -= 1; 
+    }
 
-    free(cachePtr);
-    printf("%d %d %d %d %s\n", verbose, s, E, b, traceFile);
+    while (fgets(buf, MAX_LINE_LEN, fp) != NULL) {
+        int i;
+        sscanf(buf, " %c %lx,%d", &c, &addr, &i);
 
-    printSummary(0, 0, 0);
+        int g = (set_bit_index & addr) >> block_bits_num;
+        long unsigned tag = addr >> (set_bit_index + block_bits_num);
+
+        printf("%lx, %d\n", tag, g);     
+
+    }
+    if (verbose) {
+        printf("verbose\n");
+    }
+    fclose(fp);
+    free(cache_ptr);
+
+    printSummary(hits, misses, evictions);
     return 0;
 }
